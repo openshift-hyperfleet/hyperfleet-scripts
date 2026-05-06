@@ -12,96 +12,127 @@ RESET=$(printf '\033[0m')
 
 CLUSTERS_JSON=$(hf_get "/clusters")
 
-ALL_CLUSTER_IDS=$(echo "$CLUSTERS_JSON" | jq -r '.items[].id')
+CLUSTER_STATUSES_MAP='{}'
+NP_MAP='{}'
+NP_STATUSES_MAP='{}'
 
-COMBINED=""
-for CID in $ALL_CLUSTER_IDS; do
-  NP_JSON=$(hf_get "/clusters/${CID}/nodepools" 2>/dev/null)
-  CLUSTER_STATUSES=$(hf_get "/clusters/${CID}/statuses" 2>/dev/null)
-  CLUSTER_AC=$(echo "$CLUSTER_STATUSES" | jq -r '.items // [] | length')
-  CLUSTER_ROW=$(echo "$CLUSTERS_JSON" | jq -r --arg cid "$CID" --arg ac "${CLUSTER_AC:-0}" '
-    .items[] | select(.id == $cid) |
-    ((.status.conditions // [] | map(select(.type == "Ready")) | .[0].status) // "-") as $ready |
-    ["C", .id, .name, (.generation // 0 | tostring), $ready, $ac,
-     (.status.conditions // [] | map(select(.type != "Ready")) | map(.type + "=" + .status) | join(","))] | @tsv
-  ')
-  NP_IDS=$(echo "$NP_JSON" | jq -r '(.items // [])[].id' 2>/dev/null)
-  NP_ROWS=""
-  for NPID in $NP_IDS; do
-    NP_STATUSES=$(hf_get "/clusters/${CID}/nodepools/${NPID}/statuses" 2>/dev/null)
-    NP_AC=$(echo "$NP_STATUSES" | jq -r '.items // [] | length')
-    ROW=$(echo "$NP_JSON" | jq -r --arg npid "$NPID" --arg ac "${NP_AC:-0}" '
-      .items[] | select(.id == $npid) |
-      ((.status.conditions // [] | map(select(.type == "Ready")) | .[0].status) // "-") as $ready |
-      ["N", ("  " + .id), ("  " + .name), (.generation // 0 | tostring), $ready, $ac,
-       (.status.conditions // [] | map(select(.type != "Ready")) | map(.type + "=" + .status) | join(","))] | @tsv
-    ')
-    NP_ROWS+="${ROW}"$'\n'
-  done
-  COMBINED+="${CLUSTER_ROW}"$'\n'
-  if [[ -n "$NP_ROWS" ]]; then
-    COMBINED+="${NP_ROWS}"
-  fi
-done
+while IFS= read -r CID; do
+  NP_JSON=$(hf_get "/clusters/${CID}/nodepools" 2>/dev/null || echo '{"items":[]}')
+  C_STATUSES=$(hf_get "/clusters/${CID}/statuses" 2>/dev/null || echo '{"items":[]}')
 
-ALL_COND_TYPES=$(echo "$COMBINED" | awk -F'\t' '{
-  split($7, pairs, ",")
-  for (i in pairs) {
-    split(pairs[i], kv, "=")
-    if (kv[1] != "") types[kv[1]] = 1
-  }
-} END {
-  n = asorti(types, sorted)
-  for (i = 1; i <= n; i++) printf "%s\n", sorted[i]
-}')
+  CLUSTER_STATUSES_MAP=$(jq -n \
+    --argjson m "$CLUSTER_STATUSES_MAP" --arg id "$CID" --argjson s "$C_STATUSES" \
+    '$m + {($id): ($s.items // [])}')
 
-COND_HEADER=""
-COND_SEP=""
-while IFS= read -r t; do
-  [[ -z "$t" ]] && continue
-  COND_HEADER+="\t${t}"
-  COND_SEP+="\t---"
-done <<< "$ALL_COND_TYPES"
+  NP_MAP=$(jq -n \
+    --argjson m "$NP_MAP" --arg id "$CID" --argjson np "$NP_JSON" \
+    '$m + {($id): ($np.items // [])}')
 
-{
-  printf "ID\tNAME\tGEN\tREADY\tADAPTERS%s\n" "$COND_HEADER"
-  printf "---\t---\t---\t-----\t--------%s\n" "$COND_SEP"
+  while IFS= read -r NPID; do
+    NP_STAT=$(hf_get "/clusters/${CID}/nodepools/${NPID}/statuses" 2>/dev/null || echo '{"items":[]}')
+    NP_STATUSES_MAP=$(jq -n \
+      --argjson m "$NP_STATUSES_MAP" --arg id "$NPID" --argjson s "$NP_STAT" \
+      '$m + {($id): ($s.items // [])}')
+  done < <(echo "$NP_JSON" | jq -r '(.items // [])[].id')
+done < <(echo "$CLUSTERS_JSON" | jq -r '.items[].id')
 
-  while IFS=$'\t' read -r kind id name gen ready adapters conds; do
-    [[ -z "$kind" ]] && continue
-    if [[ "$ready" == "True" ]]; then
-      READY_CELL="\x01"
-    elif [[ "$ready" == "False" ]]; then
-      READY_CELL="\x02"
-    elif [[ "$ready" == "Unknown" ]]; then
-      READY_CELL="\x03"
+jq -n -r \
+  --argjson clusters "$CLUSTERS_JSON" \
+  --argjson cluster_statuses "$CLUSTER_STATUSES_MAP" \
+  --argjson np_map "$NP_MAP" \
+  --argjson np_statuses "$NP_STATUSES_MAP" \
+  --arg green "$GREEN" --arg red "$RED" --arg yellow "$YELLOW" --arg reset "$RESET" '
+
+  def fmt_cond:
+    if . == null then "-"
     else
-      READY_CELL="-"
-    fi
-    ROW="${id}\t${name}\t${gen}\t${READY_CELL}\t${adapters}"
-    while IFS= read -r t; do
-      [[ -z "$t" ]] && continue
-      VAL=$(echo "$conds" | tr ',' '\n' | awk -F= -v t="$t" '$1 == t {print $2}')
-      if [[ "$VAL" == "True" ]]; then
-        ROW+="\t\x01"
-      elif [[ "$VAL" == "False" ]]; then
-        ROW+="\t\x02"
-      elif [[ "$VAL" == "Unknown" ]]; then
-        ROW+="\t\x03"
-      else
-        ROW+="\t-"
-      fi
-    done <<< "$ALL_COND_TYPES"
-    printf "%b\n" "$ROW"
-  done <<< "$COMBINED"
-} | awk -v green="$GREEN" -v red="$RED" -v yellow="$YELLOW" -v reset="$RESET" '
+      (.observed_generation | if . != null then tostring else "" end) as $gen |
+      if   .status == "True"    then "" + $gen
+      elif .status == "False"   then "" + $gen
+      elif .status == "Unknown" then "" + $gen
+      elif .status == "" or .status == null then "-"
+      else .status end
+    end;
+
+  def fmt_adapter(ctype):
+    if . == null then "-"
+    else
+      (.observed_generation | if . != null then tostring else "" end) as $gen |
+      (.conditions | map(select(.type == ctype)) | .[0].status) as $s |
+      if   $s == "True"    then "" + $gen
+      elif $s == "False"   then "" + $gen
+      elif $s == "Unknown" then "" + $gen
+      elif $s == null      then "-"
+      else $s end
+    end;
+
+  $clusters.items as $citems |
+
+  # Condition types from clusters and nodepools (excluding *Successful)
+  ([ $citems[].status.conditions[]?.type,
+     ($np_map | to_entries[].value[].status.conditions[]?.type) ]
+   | unique | map(select(endswith("Successful") | not))) as $ctypes |
+
+  # Adapter names from all statuses
+  ([ ($cluster_statuses | to_entries[].value[].adapter),
+     ($np_statuses | to_entries[].value[].adapter) ]
+   | map(select(. != null)) | unique) as $adapters |
+
+  # Header
+  (["ID", "NAME", "GEN"] + $ctypes + $adapters | @tsv),
+  (["---", "---", "---"] + ($ctypes | map("---")) + ($adapters | map("---")) | @tsv),
+
+  # Rows: cluster row followed by its nodepool rows
+  ($citems[] |
+    . as $cluster |
+    ($cluster_statuses[$cluster.id] // []) as $cstatus |
+    (if $cluster.deleted_time != null then "Finalized" else "Available" end) as $ctype |
+
+    ([ .id, .name,
+       ((.generation // 0 | tostring) + (if .deleted_time != null then "" else "" end)) ] +
+     [ $ctypes[] as $t | $cluster.status.conditions // [] | map(select(.type == $t)) | .[0] | fmt_cond ] +
+     [ $adapters[] as $a | $cstatus | map(select(.adapter == $a)) | .[0] | fmt_adapter($ctype) ]
+     | @tsv),
+
+    ($np_map[$cluster.id] // [] | .[] |
+      . as $np |
+      ($np_statuses[$np.id] // []) as $npstatus |
+      (if $np.deleted_time != null then "Finalized" else "Available" end) as $nptype |
+
+      ([ ("  " + .id), ("  " + .name),
+         ((.generation // 0 | tostring) + (if .deleted_time != null then "" else "" end)) ] +
+       [ $ctypes[] as $t | $np.status.conditions // [] | map(select(.type == $t)) | .[0] | fmt_cond ] +
+       [ $adapters[] as $a | $npstatus | map(select(.adapter == $a)) | .[0] | fmt_adapter($nptype) ]
+       | @tsv)
+    )
+  )
+' | awk -v green="$GREEN" -v red="$RED" -v yellow="$YELLOW" -v reset="$RESET" '
 BEGIN { FS = "\t" }
+function dw(cell,    c, gen, pos) {
+  c = substr(cell, 1, 1)
+  if (c == "\001" || c == "\002" || c == "\003") {
+    gen = substr(cell, 2)
+    return 1 + (gen != "" ? 1 + length(gen) : 0)
+  }
+  pos = index(cell, "\004")
+  if (pos > 0) return (pos - 1) + 3
+  return length(cell)
+}
+function render(cell,    c, gen, pos) {
+  c = substr(cell, 1, 1)
+  if (c == "\001") { gen = substr(cell, 2); return green "●" reset (gen != "" ? " " gen : "") }
+  if (c == "\002") { gen = substr(cell, 2); return red   "●" reset (gen != "" ? " " gen : "") }
+  if (c == "\003") { gen = substr(cell, 2); return yellow "●" reset (gen != "" ? " " gen : "") }
+  pos = index(cell, "\004")
+  if (pos > 0) return substr(cell, 1, pos - 1) " " red "❌" reset
+  return cell
+}
 {
   row[NR] = $0
   n = split($0, f, "\t")
   if (n > ncols) ncols = n
   for (i = 1; i <= n; i++) {
-    w = length(f[i])
+    w = dw(f[i])
     if (w > cw[i]) cw[i] = w
   }
 }
@@ -110,13 +141,9 @@ END {
     n = split(row[r], f, "\t")
     for (i = 1; i <= ncols; i++) {
       cell = (i <= n) ? f[i] : ""
-      if      (cell == "\001") display = green "●" reset
-      else if (cell == "\002") display = red   "●" reset
-      else if (cell == "\003") display = yellow "●" reset
-      else                     display = cell
-      pad = cw[i] - length(cell)
-      if (i < ncols) printf "%s%*s  ", display, pad, ""
-      else           printf "%s", display
+      pad = cw[i] - dw(cell)
+      if (i < ncols) printf "%s%*s  ", render(cell), pad, ""
+      else           printf "%s", render(cell)
     }
     printf "\n"
   }
