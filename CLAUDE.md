@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-A suite of Bash CLI scripts (`hf.*.sh`) for managing HyperFleet clusters, node pools, databases, Kubernetes resources, and Maestro resources. There is no build system, package manager, or test framework — these are standalone Bash scripts that users add to their PATH.
+A suite of Bash CLI scripts (`hf.*.sh`) for managing HyperFleet clusters, node pools, databases, and Kubernetes resources. There is no build system, package manager, or test framework — these are standalone Bash scripts that users add to their PATH.
 
 ## Validation
 
@@ -76,5 +76,4 @@ Registry parsing uses `IFS='|' read` into shell variables (`_hf_parse`) instead 
 - `viddy` — watch mode (`-w` flag on conditions/statuses scripts)
 - `psql` — database scripts
 - `gcloud` — GCP operations (pubsub)
-- `maestro-cli` — Maestro resource management (compiled from [openshift-hyperfleet/maestro-cli](https://github.com/openshift-hyperfleet/maestro-cli))
 - `curl` — API calls (used with `--http1.1`)
