@@ -40,15 +40,8 @@ HF_DB_PORT_FILE="$HF_CONFIG_DIR/db-port"
 HF_DB_NAME_FILE="$HF_CONFIG_DIR/db-name"
 HF_DB_USER_FILE="$HF_CONFIG_DIR/db-user"
 HF_DB_PASSWORD_FILE="$HF_CONFIG_DIR/db-password"
-HF_MAESTRO_CONSUMER_FILE="$HF_CONFIG_DIR/maestro-consumer"
-HF_MAESTRO_HTTP_ENDPOINT_FILE="$HF_CONFIG_DIR/maestro-http-endpoint"
-HF_MAESTRO_GRPC_ENDPOINT_FILE="$HF_CONFIG_DIR/maestro-grpc-endpoint"
-HF_MAESTRO_NAMESPACE_FILE="$HF_CONFIG_DIR/maestro-namespace"
 HF_PF_API_PORT_FILE="$HF_CONFIG_DIR/pf-api-port"
 HF_PF_PG_PORT_FILE="$HF_CONFIG_DIR/pf-pg-port"
-HF_PF_MAESTRO_HTTP_PORT_FILE="$HF_CONFIG_DIR/pf-maestro-http-port"
-HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE="$HF_CONFIG_DIR/pf-maestro-http-remote-port"
-HF_PF_MAESTRO_GRPC_PORT_FILE="$HF_CONFIG_DIR/pf-maestro-grpc-port"
 HF_RABBITMQ_HOST_FILE="$HF_CONFIG_DIR/rabbitmq-host"
 HF_RABBITMQ_MGMT_PORT_FILE="$HF_CONFIG_DIR/rabbitmq-mgmt-port"
 HF_RABBITMQ_USER_FILE="$HF_CONFIG_DIR/rabbitmq-user"
@@ -68,15 +61,8 @@ _hf_load HF_DB_PORT "$HF_DB_PORT_FILE" "5432"
 _hf_load HF_DB_NAME "$HF_DB_NAME_FILE" ""
 _hf_load HF_DB_USER "$HF_DB_USER_FILE" ""
 _hf_load HF_DB_PASSWORD "$HF_DB_PASSWORD_FILE" ""
-_hf_load HF_MAESTRO_CONSUMER "$HF_MAESTRO_CONSUMER_FILE" "cluster1"
-_hf_load HF_MAESTRO_HTTP_ENDPOINT "$HF_MAESTRO_HTTP_ENDPOINT_FILE" "http://localhost:8100"
-_hf_load HF_MAESTRO_GRPC_ENDPOINT "$HF_MAESTRO_GRPC_ENDPOINT_FILE" "localhost:8090"
-_hf_load HF_MAESTRO_NAMESPACE "$HF_MAESTRO_NAMESPACE_FILE" "maestro"
 _hf_load HF_PF_API_PORT "$HF_PF_API_PORT_FILE" "8000"
 _hf_load HF_PF_PG_PORT "$HF_PF_PG_PORT_FILE" "5432"
-_hf_load HF_PF_MAESTRO_HTTP_PORT "$HF_PF_MAESTRO_HTTP_PORT_FILE" "8100"
-_hf_load HF_PF_MAESTRO_HTTP_REMOTE_PORT "$HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE" "8000"
-_hf_load HF_PF_MAESTRO_GRPC_PORT "$HF_PF_MAESTRO_GRPC_PORT_FILE" "8090"
 _hf_load HF_RABBITMQ_HOST "$HF_RABBITMQ_HOST_FILE" "localhost"
 _hf_load HF_RABBITMQ_MGMT_PORT "$HF_RABBITMQ_MGMT_PORT_FILE" "15672"
 _hf_load HF_RABBITMQ_USER "$HF_RABBITMQ_USER_FILE" "guest"
@@ -224,15 +210,8 @@ hf_set_db_port() { _hf_set HF_DB_PORT "$HF_DB_PORT_FILE" "$1" "DB port"; }
 hf_set_db_name() { _hf_set HF_DB_NAME "$HF_DB_NAME_FILE" "$1" "DB name"; }
 hf_set_db_user() { _hf_set HF_DB_USER "$HF_DB_USER_FILE" "$1" "DB user"; }
 hf_set_db_password() { _hf_set HF_DB_PASSWORD "$HF_DB_PASSWORD_FILE" "$1" "DB password"; }
-hf_set_maestro_consumer() { _hf_set HF_MAESTRO_CONSUMER "$HF_MAESTRO_CONSUMER_FILE" "$1" "Maestro consumer"; }
-hf_set_maestro_http_endpoint() { _hf_set HF_MAESTRO_HTTP_ENDPOINT "$HF_MAESTRO_HTTP_ENDPOINT_FILE" "$1" "Maestro HTTP endpoint"; }
-hf_set_maestro_grpc_endpoint() { _hf_set HF_MAESTRO_GRPC_ENDPOINT "$HF_MAESTRO_GRPC_ENDPOINT_FILE" "$1" "Maestro gRPC endpoint"; }
-hf_set_maestro_namespace() { _hf_set HF_MAESTRO_NAMESPACE "$HF_MAESTRO_NAMESPACE_FILE" "$1" "Maestro namespace"; }
 hf_set_pf_api_port() { _hf_set HF_PF_API_PORT "$HF_PF_API_PORT_FILE" "$1" "Port-forward API port"; }
 hf_set_pf_pg_port() { _hf_set HF_PF_PG_PORT "$HF_PF_PG_PORT_FILE" "$1" "Port-forward PG port"; }
-hf_set_pf_maestro_http_port() { _hf_set HF_PF_MAESTRO_HTTP_PORT "$HF_PF_MAESTRO_HTTP_PORT_FILE" "$1" "Port-forward Maestro HTTP port"; }
-hf_set_pf_maestro_http_remote_port() { _hf_set HF_PF_MAESTRO_HTTP_REMOTE_PORT "$HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE" "$1" "Port-forward Maestro HTTP remote port"; }
-hf_set_pf_maestro_grpc_port() { _hf_set HF_PF_MAESTRO_GRPC_PORT "$HF_PF_MAESTRO_GRPC_PORT_FILE" "$1" "Port-forward Maestro gRPC port"; }
 hf_set_registry() { _hf_set HF_REGISTRY "$HF_REGISTRY_FILE" "$1" "Registry"; }
 
 hf_clear_context() { _hf_clear HF_KUBE_CONTEXT "$HF_CONTEXT_FILE" "Context"; }
@@ -366,15 +345,8 @@ HF_CONFIG_REGISTRY=(
   "hyperfleet|cluster-id"
   "hyperfleet|cluster-name"
   "hyperfleet|nodepool-id"
-  "maestro|maestro-consumer|cluster1"
-  "maestro|maestro-http-endpoint|http://localhost:8100"
-  "maestro|maestro-grpc-endpoint|localhost:8090"
-  "maestro|maestro-namespace|maestro"
   "portforward|pf-api-port|8000"
   "portforward|pf-pg-port|5432"
-  "portforward|pf-maestro-http-port|8100"
-  "portforward|pf-maestro-http-remote-port|8000"
-  "portforward|pf-maestro-grpc-port|8090"
   "database|db-host|localhost"
   "database|db-port|5432"
   "database|db-name|hyperfleet"

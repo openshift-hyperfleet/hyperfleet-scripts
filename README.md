@@ -18,7 +18,6 @@ hf.config.sh doctor              # Check which scripts are ready to use
 | `hf.db.*` | Direct database access — queries, status records, cleanup |
 | `hf.kube.*` | Kubernetes helpers — context, port-forward, in-cluster curl, debug pods |
 | `hf.logs.*` | Log tailing — pods and adapter-filtered logs |
-| `hf.maestro.*` | Maestro resource management via `maestro-cli` |
 | `hf.pubsub.*` | GCP Pub/Sub — list topics/subscriptions, publish change events |
 | `hf.rabbitmq.*` | RabbitMQ — publish change events via HTTP management API |
 | `hf.repos.*` | GitHub repository status overview |
@@ -53,9 +52,7 @@ Settings are grouped into sections in the registry:
 
 **hyperfleet**: `api-url`, `api-version`, `token`, `context`, `namespace`, `gcp-project`, `cluster-id`, `cluster-name`, `nodepool-id`
 
-**maestro**: `maestro-consumer`, `maestro-http-endpoint`, `maestro-grpc-endpoint`, `maestro-namespace`
-
-**portforward**: `pf-api-port`, `pf-pg-port`, `pf-maestro-http-port`, `pf-maestro-http-remote-port`, `pf-maestro-grpc-port`
+**portforward**: `pf-api-port`, `pf-pg-port`
 
 **database**: `db-host`, `db-port`, `db-name`, `db-user`, `db-password`
 
@@ -169,19 +166,6 @@ kubectl delete pod my-app-debug-<timestamp> -n default
 |--------|-------------|
 | `hf.logs.sh` | Tail pod logs with context |
 | `hf.logs.adapter.sh` | Tail adapter pod logs filtered by cluster ID |
-
-### Maestro
-
-Maestro scripts require `maestro-cli` to be compiled and available on your `PATH` from [openshift-hyperfleet/maestro-cli](https://github.com/openshift-hyperfleet/maestro-cli).
-
-| Script | Description |
-|--------|-------------|
-| `hf.maestro.list.sh` | List maestro resources |
-| `hf.maestro.get.sh` | Get a maestro resource by name (auto-selects if one match; interactive menu if multiple) |
-| `hf.maestro.delete.sh` | Delete a maestro resource by name (interactive selection if no name given) |
-| `hf.maestro.bundles.sh` | List maestro resource bundles |
-| `hf.maestro.consumers.sh` | List maestro consumers |
-| `hf.maestro.tui.sh` | Launch maestro-cli TUI |
 
 ### Pub/Sub and Messaging
 
